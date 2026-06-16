@@ -142,6 +142,16 @@ uv sync
 cp .env.example .env
 ```
 
+Clone the upstream reference repositories as well:
+
+```bash
+cd ..
+git clone https://github.com/SWE-agent/mini-swe-agent.git
+git clone https://github.com/swe-bench/SWE-bench.git
+cd <repo-folder>
+```
+
+These repositories are not meant to be used as-is in your final pipeline. They are reference material: read them to understand how `mini-swe-agent` writes trajectories, how SWE-bench expects predictions, and how the evaluation harness produces reports and logs.
 
 Install the dependencies:
 ```bash
