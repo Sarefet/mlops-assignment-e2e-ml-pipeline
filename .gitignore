@@ -10,3 +10,8 @@ __pycache__
 
 mini-swe-agent/
 SWE-bench/
+
+/runs/
+/mlflow/
+/logs/
+/screenshots/
