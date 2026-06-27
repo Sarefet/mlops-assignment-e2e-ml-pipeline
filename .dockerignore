@@ -1,0 +1,11 @@
+.venv
+.git
+.ruff_cache
+mlflow/
+runs/
+logs/
+trajectories/
+screenshots/
+__pycache__/
+*.pyc
+.env

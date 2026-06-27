@@ -55,6 +55,23 @@ bash run-airflow-standalone.sh
 
 **DAG parameters:** `split`, `subset`, `workers`, `model`, `task_slice`, `run_id`, `cost_limit`.
 
+### Docker Compose (production-style)
+
+Alternative to `run-airflow-standalone.sh` + `start_mlflow.sh`:
+
+```bash
+cp .env.example .env          # set NEBIUS_API_KEY
+chmod +x scripts/start_compose.sh
+./scripts/start_compose.sh    # or: docker compose up -d --build
+```
+
+- **Airflow:** http://localhost:8080 (`admin` / `admin`)
+- **MLflow:** http://localhost:5000
+- Airflow container mounts the repo, `runs/`, host Docker socket (for SWE-bench), and `../mini-swe-agent` for agent config.
+- Stop: `docker compose down`
+
+See `docker-compose.yaml`, `Dockerfile.airflow`, `Dockerfile.mlflow`.
+
 ## Completed run — submit-v2 (primary)
 
 | Field | Value |
@@ -119,7 +136,6 @@ runs/<run-id>/
 
 ## What I'd do with more time
 
-- **DockerOperator** + project `Dockerfile` for stronger execution isolation (10% rubric)
-- **docker-compose.yaml** for Airflow + MLflow on the VM (10% rubric)
+- **DockerOperator** tasks using the project `Dockerfile` instead of subprocess calls
 - Upload full `runs/<run-id>/` to Nebius Object Storage; set `RUN_ARTIFACT_URI`
 - Additional runs with different `task_slice` or `model` for MLflow comparison

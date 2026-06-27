@@ -1,0 +1,35 @@
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    docker.io \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /mlops-assignment
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked && uv sync --group airflow
+
+COPY dags dags/
+COPY pipeline pipeline/
+COPY scripts scripts/
+COPY run-airflow-standalone.sh .
+
+ENV PATH="/mlops-assignment/.venv/bin:$PATH"
+ENV AIRFLOW_HOME=/opt/airflow
+ENV AIRFLOW__CORE__LOAD_EXAMPLES=false
+ENV AIRFLOW__CORE__DAGS_FOLDER=/mlops-assignment/dags
+ENV PYTHONPATH=/mlops-assignment
+ENV MLFLOW_TRACKING_URI=http://mlflow:5000
+ENV MLFLOW_EXPERIMENT_NAME=swe-bench-agent-eval
+
+RUN mkdir -p "${AIRFLOW_HOME}" \
+ && echo '{"admin": "admin"}' > "${AIRFLOW_HOME}/simple_auth_manager_passwords.json.generated" \
+ && chmod +x scripts/*.sh run-airflow-standalone.sh
+
+EXPOSE 8080
+
+CMD ["airflow", "standalone"]

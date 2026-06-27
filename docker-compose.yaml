@@ -1,0 +1,41 @@
+# Airflow + MLflow for the evaluate_agent pipeline (production-style bonus path).
+#
+# Usage:
+#   cp .env.example .env   # set NEBIUS_API_KEY
+#   docker compose up -d --build
+#   open http://localhost:8080  (Airflow, admin/admin)
+#   open http://localhost:5000  (MLflow)
+#
+# SWE-bench eval needs Docker-in-Docker: the Airflow container mounts the host socket.
+
+services:
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlflow:/mlflow
+    restart: unless-stopped
+
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    depends_on:
+      - mlflow
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_EXPERIMENT_NAME: swe-bench-agent-eval
+      MINI_SWE_CONFIG: ${MINI_SWE_CONFIG:-/mini-swe-agent/src/minisweagent/config/benchmarks/swebench.yaml}
+    volumes:
+      - .:/mlops-assignment
+      - ./runs:/mlops-assignment/runs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${MINI_SWE_AGENT_PATH:-../mini-swe-agent}:/mini-swe-agent:ro
+    restart: unless-stopped
