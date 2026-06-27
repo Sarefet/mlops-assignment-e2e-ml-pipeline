@@ -53,7 +53,20 @@ def run_swebench_eval(run_config: dict[str, Any], preds_path: Path, run_dir: Pat
 
     harness_logs = logs_dir / "run_evaluation"
     _copy_aggregate_reports(harness_logs, reports_dir)
+    _copy_run_aggregate_report(project_root, run_config, reports_dir)
     return eval_dir
+
+
+def _copy_run_aggregate_report(
+    project_root: Path, run_config: dict[str, Any], reports_dir: Path
+) -> None:
+    """SWE-bench writes the summary JSON to project cwd, e.g. nebius__moonshotai__Kimi-K2.6.submit-v2.json."""
+    run_id = str(run_config["eval_run_id"])
+    model_tag = str(run_config["model"]).replace("/", "__")
+    patterns = [f"{model_tag}.{run_id}.json", f"*.{run_id}.json"]
+    for pattern in patterns:
+        for report in project_root.glob(pattern):
+            shutil.copy2(report, reports_dir / report.name)
 
 
 def _copy_aggregate_reports(harness_logs: Path, reports_dir: Path) -> None:
@@ -94,18 +107,21 @@ def collect_metrics(eval_dir: Path) -> dict[str, Any]:
 
 
 def _find_aggregate_report(logs_dir: Path, reports_dir: Path) -> Path | None:
-    search_roots = [logs_dir, reports_dir, logs_dir.parent]
+    search_roots: list[Path] = [logs_dir, reports_dir, logs_dir.parent]
     for ancestor in logs_dir.parents:
+        if ancestor.name == "runs" and ancestor.parent.exists():
+            search_roots.append(ancestor.parent)
         project_logs = ancestor / "logs"
         if project_logs.exists() and project_logs != logs_dir:
             search_roots.append(project_logs)
-            break
     candidates: list[Path] = []
+    seen_roots: set[Path] = set()
     for root in search_roots:
-        if not root.exists():
+        if not root.exists() or root in seen_roots:
             continue
+        seen_roots.add(root)
         candidates.extend(root.glob("*.json"))
-        candidates.extend(root.rglob("*.test.json"))
+        candidates.extend(root.rglob("*.json"))
 
     for path in sorted(candidates, key=lambda p: p.stat().st_size, reverse=True):
         try:

@@ -5,7 +5,7 @@
 - **Orchestrator:** Apache Airflow (`dags/evaluate_agent.py`) — four TaskFlow tasks
 - **Agent:** [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) batch via Nebius Token Factory (`scripts/run_agent.sh`)
 - **Evaluation:** [SWE-bench](https://github.com/swe-bench/SWE-bench) harness (`scripts/run_eval.sh`)
-- **Tracking:** MLflow — params, metrics, artifact path under `runs/<run-id>/`
+- **Tracking:** MLflow — params, metrics, artifacts under `runs/<run-id>/`
 - **Shared helpers:** `pipeline/` (`config`, `runner`, `eval`, `manifest`, `mlflow_logging`, `env`)
 
 ```text
@@ -48,77 +48,78 @@ bash run-airflow-standalone.sh
   "workers": 3,
   "model": "nebius/moonshotai/Kimi-K2.6",
   "task_slice": "0:3",
-  "run_id": "submit-v1",
+  "run_id": "submit-v2",
   "cost_limit": "0"
 }
 ```
 
 **DAG parameters:** `split`, `subset`, `workers`, `model`, `task_slice`, `run_id`, `cost_limit`.
 
-## Completed run — submit-v1
+## Completed run — submit-v2 (primary)
+
+| Field | Value |
+|-------|-------|
+| run_id | `submit-v2` |
+| model | `nebius/moonshotai/Kimi-K2.6` |
+| task_slice | `0:3` (astropy-12907, astropy-13033, astropy-13236) |
+| submitted / resolved | 3 / 2 |
+| resolve_rate | 0.667 (66.7%) |
+| MLflow run id | `f962323f32974cbba1dfd8fdc9886408` |
+| MLflow experiment | `swe-bench-agent-eval` |
+| Airflow duration | ~7 min (run_agent ~6 min, run_eval ~2 min) |
+
+### What happened
+
+All four Airflow tasks completed successfully. The agent produced real patches; SWE-bench Docker eval ran on all three instances. Two instances resolved, one unresolved, zero errors. Metrics and artifacts were logged to MLflow.
+
+Fixes applied for reproducibility: `pipeline/env.py` loads `NEBIUS_API_KEY` from `.env` into Airflow tasks; `pipeline/mlflow_logging.py` uses the project venv's MLflow; eval aggregate report is collected from the project root.
+
+## Earlier run — submit-v1 (infrastructure proof)
 
 | Field | Value |
 |-------|-------|
 | run_id | `submit-v1` |
-| model | `nebius/moonshotai/Kimi-K2.6` |
-| task_slice | `0:3` (3 SWE-bench Verified instances) |
 | submitted / resolved | 3 / 0 |
 | resolve_rate | 0.0 |
 | MLflow run id | `ef4cf61973e748dabc23165c22434a40` |
-| MLflow experiment | `swe-bench-agent-eval` |
-| MLflow UI | http://127.0.0.1:5000 (on VM; port-forward to view) |
 
-### What happened
-
-All four Airflow tasks completed successfully. The pipeline wrote a full `runs/submit-v1/` tree and logged the run to MLflow.
-
-The agent step finished quickly and produced `preds.json` with the correct instance IDs but **empty `model_patch` fields** for all three instances. SWE-bench eval therefore reported `Instances with empty patches: 3` and `metrics_found: false`. This is an agent/API-configuration issue on the first run (Nebius API key not consistently available to the Airflow worker), not a pipeline-structure failure.
-
-The run still demonstrates: configurable DAG, isolated run directory, eval harness integration, manifest generation, and MLflow tracking — which is what the assignment prioritizes over resolve rate.
-
-### Optional follow-up — submit-v2
-
-Re-trigger with `"run_id": "submit-v2"` after:
-
-1. Confirming `NEBIUS_API_KEY` in `.env`
-2. Passing `bash scripts/mini-swe-bench-single.sh` on the VM (non-empty patch)
-3. Restarting Airflow from a shell where `docker ps` works without sudo
-
-See `runs/submit-v2/README.md`.
+First DAG run before API key was consistently available to Airflow — empty patches, `metrics_found: false`. Kept as evidence of pipeline wiring and retry/debug workflow.
 
 ## Artifact layout
 
 ```text
 runs/<run-id>/
-  config.json              # frozen run parameters
-  run-agent/
-    preds.json             # SWE-bench predictions
-    trajectories/          # mini-swe-agent logs + per-instance output
-  run-eval/
-    logs/                  # SWE-bench harness logs (when instances run)
-    reports/               # per-instance report.json copies
-  metrics.json             # parsed resolve metrics
-  manifest.json            # provenance index (paths, params, timestamps)
+  config.json
+  run-agent/preds.json
+  run-agent/trajectories/
+  run-eval/logs/
+  run-eval/reports/
+  metrics.json
+  manifest.json
 ```
 
-**Git policy:** commit small files (`config.json`, `metrics.json`, `manifest.json`) per run. Full trajectories stay on the VM (too large for git).
+**Git policy:** small JSON files per run in git; full trajectories on VM only.
 
 ## Rerun by run_id
 
 1. Trigger `evaluate_agent` with a new or existing `run_id` param.
 2. Outputs land in `runs/<run-id>/` without overwriting other runs.
-3. `config.json` and `manifest.json` in that folder record exact parameters and timestamps.
-4. Compare runs in MLflow experiment `swe-bench-agent-eval`.
+3. Compare runs in MLflow experiment `swe-bench-agent-eval`.
 
 ## Screenshots
 
-- `screenshots/airflow_dag.png` — `evaluate_agent` graph, submit-v1, all tasks green
-- `screenshots/mlflow_runs.png` — MLflow experiment with submit-v1 logged
+| File | Description |
+|------|-------------|
+| `screenshots/airflow_dag_v2.png` | Airflow — submit-v2, all tasks success |
+| `screenshots/mlflow_runs_v2.png` | MLflow — submit-v2 overview (params + metrics) |
+| `screenshots/mlflow_metrics_v2.png` | MLflow — submit-v2 metric charts |
+| `screenshots/mlflow_artifacts_v2.png` | MLflow — submit-v2 artifacts tree |
+| `screenshots/airflow_dag.png` | Airflow — submit-v1 run |
+| `screenshots/mlflow_runs.png` | MLflow — submit-v1 (params only) |
 
 ## What I'd do with more time
 
-- **submit-v2** with `.env` loaded into agent tasks (`pipeline/env.py`) for real patches and non-zero metrics
-- **DockerOperator** + project `Dockerfile` for stronger execution isolation
-- **docker-compose.yaml** for Airflow + MLflow on the VM
-- Upload full `runs/<run-id>/` to Nebius Object Storage; set `RUN_ARTIFACT_URI` for MLflow
-- Second DAG run with different `task_slice` or `model` to compare in MLflow
+- **DockerOperator** + project `Dockerfile` for stronger execution isolation (10% rubric)
+- **docker-compose.yaml** for Airflow + MLflow on the VM (10% rubric)
+- Upload full `runs/<run-id>/` to Nebius Object Storage; set `RUN_ARTIFACT_URI`
+- Additional runs with different `task_slice` or `model` for MLflow comparison

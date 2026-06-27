@@ -1,5 +1,9 @@
-# submit-v2 — (optional) agent re-run with API key fix
+# submit-v2 — primary evaluation run
 
-Trigger the DAG with `"run_id": "submit-v2"` after confirming `bash scripts/mini-swe-bench-single.sh` produces a non-empty patch on the VM.
+Completed on Nebius VM via `evaluate_agent` DAG (all four tasks green, ~7 min).
 
-Commit `metrics.json`, `manifest.json`, and `config.json` here after a successful run.
+- **Agent:** 3 instances with non-empty `model_patch` fields (504–1937 bytes each).
+- **Eval:** 3 submitted, 3 completed, **2 resolved** (66.7% resolve rate).
+- **MLflow:** run `f962323f32974cbba1dfd8fdc9886408` in experiment `swe-bench-agent-eval`.
+
+Full trajectories and eval logs remain on the VM. This folder contains reproducibility files only.

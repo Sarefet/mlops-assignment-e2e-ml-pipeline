@@ -1,0 +1,10 @@
+{
+  "aggregate_report": "run-eval/reports/nebius__moonshotai__Kimi-K2.6.submit-v2.json",
+  "completed_instances": 3,
+  "error_instances": 0,
+  "metrics_found": true,
+  "resolve_rate": 0.6666666666666666,
+  "resolved_instances": 2,
+  "submitted_instances": 3,
+  "unresolved_instances": 1
+}
