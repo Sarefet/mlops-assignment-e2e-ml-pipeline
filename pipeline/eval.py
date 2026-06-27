@@ -12,6 +12,9 @@ def _run(cmd: list[str], *, cwd: Path, env: dict[str, str]) -> None:
     subprocess.run(cmd, cwd=cwd, env=env, check=True)
 
 
+from pipeline.env import project_env as _project_env
+
+
 def run_swebench_eval(run_config: dict[str, Any], preds_path: Path, run_dir: Path) -> Path:
     """Run SWE-bench evaluation and collect logs/reports under run-eval/."""
     project_root = run_dir.parents[1]
@@ -21,28 +24,34 @@ def run_swebench_eval(run_config: dict[str, Any], preds_path: Path, run_dir: Pat
     logs_dir.mkdir(parents=True, exist_ok=True)
     reports_dir.mkdir(parents=True, exist_ok=True)
 
-    env = {
-        **os.environ,
-        "PREDS_PATH": str(preds_path),
-        "DATASET_NAME": run_config["dataset_name"],
-        "EVAL_WORKERS": str(run_config["workers"]),
-        "EVAL_RUN_ID": run_config["eval_run_id"],
-        "EVAL_LOG_DIR": str(logs_dir),
-    }
+    env = _project_env(
+        project_root,
+        {
+            **os.environ,
+            "PREDS_PATH": str(preds_path),
+            "DATASET_NAME": run_config["dataset_name"],
+            "DATASET_SPLIT": run_config["split"],
+            "EVAL_WORKERS": str(run_config["workers"]),
+            "EVAL_RUN_ID": run_config["eval_run_id"],
+        },
+    )
 
     script = project_root / "scripts" / "run_eval.sh"
     _run(["bash", str(script)], cwd=project_root, env=env)
 
-    # SWE-bench writes under logs/run_evaluation/<run_id>/...
-    harness_logs = logs_dir / "run_evaluation"
-    if not harness_logs.exists():
-        # Fallback: harness may write to project logs/
-        fallback = project_root / "logs" / "run_evaluation"
-        if fallback.exists():
-            if harness_logs.exists():
-                shutil.rmtree(harness_logs)
-            shutil.copytree(fallback, harness_logs)
+    # Harness writes under <project_root>/logs/ (no --log_dir in this swebench version)
+    source_logs = project_root / "logs"
+    if source_logs.exists():
+        for item in source_logs.iterdir():
+            dest = logs_dir / item.name
+            if item.is_dir():
+                if dest.exists():
+                    shutil.rmtree(dest)
+                shutil.copytree(item, dest)
+            else:
+                shutil.copy2(item, dest)
 
+    harness_logs = logs_dir / "run_evaluation"
     _copy_aggregate_reports(harness_logs, reports_dir)
     return eval_dir
 
@@ -86,6 +95,11 @@ def collect_metrics(eval_dir: Path) -> dict[str, Any]:
 
 def _find_aggregate_report(logs_dir: Path, reports_dir: Path) -> Path | None:
     search_roots = [logs_dir, reports_dir, logs_dir.parent]
+    for ancestor in logs_dir.parents:
+        project_logs = ancestor / "logs"
+        if project_logs.exists() and project_logs != logs_dir:
+            search_roots.append(project_logs)
+            break
     candidates: list[Path] = []
     for root in search_roots:
         if not root.exists():

@@ -1,9 +1,17 @@
 set -euo pipefail
 
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 export AIRFLOW_HOME=~/airflow
 export AIRFLOW__CORE__DAGS_FOLDER=$(pwd)/dags
 export AIRFLOW__CORE__LOAD_EXAMPLES=false
 export PYTHONPATH="$(pwd):${PYTHONPATH:-}"
+export PATH="$(pwd)/.venv/bin:${PATH}"
 export MLFLOW_TRACKING_URI="${MLFLOW_TRACKING_URI:-http://127.0.0.1:5000}"
 export MLFLOW_EXPERIMENT_NAME="${MLFLOW_EXPERIMENT_NAME:-swe-bench-agent-eval}"
 

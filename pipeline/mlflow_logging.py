@@ -1,8 +1,21 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Any
+
+
+def _import_project_mlflow():
+    """Airflow runs tasks with its own Python; use the project venv's mlflow."""
+    project_root = Path(__file__).resolve().parents[1]
+    for site_packages in (project_root / ".venv" / "lib").glob("python*/site-packages"):
+        site = str(site_packages)
+        if site not in sys.path:
+            sys.path.insert(0, site)
+    import mlflow
+
+    return mlflow
 
 
 def log_mlflow_run(
@@ -13,10 +26,7 @@ def log_mlflow_run(
     run_dir: Path | None = None,
 ) -> str | None:
     """Log params, metrics, and artifact references to MLflow. Returns MLflow run id."""
-    try:
-        import mlflow
-    except ImportError as exc:
-        raise RuntimeError("mlflow is not installed. Run: uv sync --group dev") from exc
+    mlflow = _import_project_mlflow()
 
     tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
     experiment = os.environ.get("MLFLOW_EXPERIMENT_NAME", "swe-bench-agent-eval")

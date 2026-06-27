@@ -1,0 +1,28 @@
+{
+  "artifact_uri": null,
+  "config": "config.json",
+  "created_at": "2026-06-27T14:00:39.698460+00:00",
+  "finished_at": "2026-06-27T14:22:49.320126+00:00",
+  "metrics_summary": {
+    "metrics_found": false
+  },
+  "parameters": {
+    "cost_limit": "0",
+    "dataset_name": "princeton-nlp/SWE-bench_Verified",
+    "model": "nebius/moonshotai/Kimi-K2.6",
+    "split": "test",
+    "subset": "verified",
+    "task_slice": "0:3",
+    "workers": 3
+  },
+  "paths": {
+    "eval_logs": "run-eval/logs/",
+    "eval_reports": "run-eval/reports/",
+    "metrics_json": "metrics.json",
+    "preds_json": "run-agent/preds.json",
+    "run_agent": "run-agent/",
+    "run_eval": "run-eval/",
+    "trajectories": "run-agent/trajectories/"
+  },
+  "run_id": "submit-v1"
+}

@@ -38,6 +38,14 @@ echo "MINI_SWE_CONFIG=${MINI_SWE_CONFIG}"
 
 chmod +x scripts/*.sh run-airflow-standalone.sh
 
+echo "==> Pre-caching SWE-bench Verified dataset (Hugging Face)"
+"${ROOT}/.venv/bin/python" - <<'PY'
+from datasets import load_dataset
+
+ds = load_dataset("princeton-nlp/SWE-bench_Verified", split="test")
+print(f"Cached {len(ds)} instances")
+PY
+
 echo "==> Local pipeline smoke (sample data, no API)"
 ./scripts/smoke_local.sh
 

@@ -11,7 +11,14 @@ __pycache__
 mini-swe-agent/
 SWE-bench/
 
-/runs/
+# Run artifacts: ignore large outputs; allow small hand-in files per run-id
+/runs/*
+!/runs/*/
+!/runs/*/*.json
+!/runs/*/*.md
+
 /mlflow/
-/logs/
-/screenshots/
+
+# Screenshots for REPORT.md
+/screenshots/*
+!/screenshots/*.png

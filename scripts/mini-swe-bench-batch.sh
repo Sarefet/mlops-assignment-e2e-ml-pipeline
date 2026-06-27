@@ -1,4 +1,7 @@
-MSWEA_COST_TRACKING='ignore_errors' mini-extra swebench \
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+MSWEA_COST_TRACKING='ignore_errors' uv run mini-extra swebench \
     --subset verified \
     --split test \
     --model nebius/moonshotai/Kimi-K2.6 \

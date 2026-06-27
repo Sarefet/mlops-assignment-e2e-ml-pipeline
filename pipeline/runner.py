@@ -11,6 +11,9 @@ def _run(cmd: list[str], *, cwd: Path, env: dict[str, str]) -> None:
     subprocess.run(cmd, cwd=cwd, env=env, check=True)
 
 
+from pipeline.env import project_env as _project_env
+
+
 def run_agent_batch(run_config: dict[str, Any], run_dir: Path) -> Path:
     """Run mini-swe-agent batch and place outputs under run-agent/."""
     project_root = run_dir.parents[1]
@@ -18,18 +21,20 @@ def run_agent_batch(run_config: dict[str, Any], run_dir: Path) -> Path:
     trajectories_dir = agent_dir / "trajectories"
     trajectories_dir.mkdir(parents=True, exist_ok=True)
 
-    env = {
-        **os.environ,
-        "MSWEA_COST_TRACKING": "ignore_errors",
-        "RUN_DIR": str(agent_dir),
-        "SUBSET": run_config["subset"],
-        "SPLIT": run_config["split"],
-        "MODEL": run_config["model"],
-        "TASK_SLICE": run_config["task_slice"],
-        "WORKERS": str(run_config["workers"]),
-        "COST_LIMIT": str(run_config["cost_limit"]),
-        "MINI_SWE_CONFIG": run_config["mini_swe_config"],
-    }
+    env = _project_env(
+        project_root,
+        {
+            **os.environ,
+            "MSWEA_COST_TRACKING": "ignore_errors",
+            "RUN_DIR": str(agent_dir),
+            "SUBSET": run_config["subset"],
+            "SPLIT": run_config["split"],
+            "MODEL": run_config["model"],
+            "TASK_SLICE": run_config["task_slice"],
+            "WORKERS": str(run_config["workers"]),
+            "MINI_SWE_CONFIG": run_config["mini_swe_config"],
+        },
+    )
 
     script = project_root / "scripts" / "run_agent.sh"
     _run(["bash", str(script)], cwd=project_root, env=env)

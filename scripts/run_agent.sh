@@ -8,17 +8,18 @@ set -euo pipefail
 : "${MODEL:=nebius/moonshotai/Kimi-K2.6}"
 : "${TASK_SLICE:=0:3}"
 : "${WORKERS:=3}"
-: "${COST_LIMIT:=0}"
 : "${MINI_SWE_CONFIG:=../mini-swe-agent/src/minisweagent/config/benchmarks/swebench.yaml}"
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+MINI_EXTRA="${ROOT}/.venv/bin/mini-extra"
 
 mkdir -p "${RUN_DIR}/trajectories"
 
-MSWEA_COST_TRACKING='ignore_errors' mini-extra swebench \
+MSWEA_COST_TRACKING='ignore_errors' "${MINI_EXTRA}" swebench \
   --subset "${SUBSET}" \
   --split "${SPLIT}" \
   --model "${MODEL}" \
   --slice "${TASK_SLICE}" \
   --config "${MINI_SWE_CONFIG}" \
   --workers "${WORKERS}" \
-  --cost-limit "${COST_LIMIT}" \
   -o "${RUN_DIR}/trajectories"
